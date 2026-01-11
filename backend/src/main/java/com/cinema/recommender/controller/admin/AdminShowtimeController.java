@@ -1,5 +1,6 @@
 package com.cinema.recommender.controller.admin;
 
+import com.cinema.recommender.dto.CreateShowtimeRequest;
 import com.cinema.recommender.entity.Showtime;
 import com.cinema.recommender.service.ShowtimeAdminService;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +16,8 @@ public class AdminShowtimeController {
     private final ShowtimeAdminService showtimeAdminService;
 
     @PostMapping
-    public Showtime createShowtime(@RequestBody Showtime showtime) {
-        return showtimeAdminService.createShowtime(showtime);
+    public Showtime createShowtime(@RequestBody CreateShowtimeRequest request) {
+        return showtimeAdminService.createShowtime(request);
     }
 
     @PutMapping("/{id}")

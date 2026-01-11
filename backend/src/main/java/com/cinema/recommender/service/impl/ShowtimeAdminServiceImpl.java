@@ -9,7 +9,7 @@ import com.cinema.recommender.repository.ShowtimeRepository;
 import com.cinema.recommender.service.ShowtimeAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import com.cinema.recommender.dto.CreateShowtimeRequest;
 import java.util.List;
 
 @Service
@@ -21,16 +21,22 @@ public class ShowtimeAdminServiceImpl implements ShowtimeAdminService {
     private final AuditoriumRepository auditoriumRepository;
 
     @Override
-    public Showtime createShowtime(Showtime showtime) {
+    public Showtime createShowtime(CreateShowtimeRequest request) {
 
-        Movie movie = movieRepository.findById(showtime.getMovie().getId())
+        Movie movie = movieRepository.findById(request.getMovieId())
                 .orElseThrow(() -> new RuntimeException("Movie not found"));
 
-        Auditorium auditorium = auditoriumRepository.findById(showtime.getAuditorium().getId())
+        Auditorium auditorium = auditoriumRepository.findById(request.getAuditoriumId())
                 .orElseThrow(() -> new RuntimeException("Auditorium not found"));
 
+        Showtime showtime = new Showtime();
         showtime.setMovie(movie);
         showtime.setAuditorium(auditorium);
+        showtime.setShowDate(request.getShowDate());
+        showtime.setShowTime(request.getShowTime());
+        showtime.setBasePrice(request.getBasePrice());
+        showtime.setWeekendPrice(request.getWeekendPrice());
+        showtime.setAvailableSeats(request.getAvailableSeats());
 
         return showtimeRepository.save(showtime);
     }
