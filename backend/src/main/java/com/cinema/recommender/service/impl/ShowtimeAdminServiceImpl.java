@@ -1,16 +1,22 @@
 package com.cinema.recommender.service.impl;
 
+import java.util.List;
+
+import com.cinema.recommender.entity.enums.Language;
+import com.cinema.recommender.entity.enums.ShowtimeFormat;
+import org.springframework.stereotype.Service;
+
+import com.cinema.recommender.dto.CreateShowtimeRequest;
 import com.cinema.recommender.entity.Auditorium;
+import com.cinema.recommender.entity.Cinema;
 import com.cinema.recommender.entity.Movie;
 import com.cinema.recommender.entity.Showtime;
 import com.cinema.recommender.repository.AuditoriumRepository;
 import com.cinema.recommender.repository.MovieRepository;
 import com.cinema.recommender.repository.ShowtimeRepository;
 import com.cinema.recommender.service.ShowtimeAdminService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import com.cinema.recommender.dto.CreateShowtimeRequest;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -29,14 +35,25 @@ public class ShowtimeAdminServiceImpl implements ShowtimeAdminService {
         Auditorium auditorium = auditoriumRepository.findById(request.getAuditoriumId())
                 .orElseThrow(() -> new RuntimeException("Auditorium not found"));
 
+        Cinema cinema = auditorium.getCinema();
+
         Showtime showtime = new Showtime();
         showtime.setMovie(movie);
         showtime.setAuditorium(auditorium);
+        showtime.setCinema(cinema);
+
         showtime.setShowDate(request.getShowDate());
         showtime.setShowTime(request.getShowTime());
+
+        showtime.setFormat(ShowtimeFormat.from(request.getFormat()));
+        showtime.setLanguage(Language.from(request.getLanguage()));
+
         showtime.setBasePrice(request.getBasePrice());
         showtime.setWeekendPrice(request.getWeekendPrice());
-        showtime.setAvailableSeats(request.getAvailableSeats());
+
+        showtime.setTotalSeats(auditorium.getTotalSeats());
+
+        showtime.setAvailableSeats(auditorium.getTotalSeats());
 
         return showtimeRepository.save(showtime);
     }
@@ -47,19 +64,45 @@ public class ShowtimeAdminServiceImpl implements ShowtimeAdminService {
         Showtime existingShowtime = showtimeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Showtime not found"));
 
-        Movie movie = movieRepository.findById(showtime.getMovie().getId())
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+        if (showtime.getMovie() != null && showtime.getMovie().getId() != null) {
+            Movie movie = movieRepository.findById(showtime.getMovie().getId())
+                    .orElseThrow(() -> new RuntimeException("Movie not found"));
+            existingShowtime.setMovie(movie);
+        }
 
-        Auditorium auditorium = auditoriumRepository.findById(showtime.getAuditorium().getId())
-                .orElseThrow(() -> new RuntimeException("Auditorium not found"));
+        if (showtime.getAuditorium() != null && showtime.getAuditorium().getId() != null) {
+            Auditorium auditorium = auditoriumRepository.findById(showtime.getAuditorium().getId())
+                    .orElseThrow(() -> new RuntimeException("Auditorium not found"));
+            existingShowtime.setAuditorium(auditorium);
+        }
 
-        existingShowtime.setMovie(movie);
-        existingShowtime.setAuditorium(auditorium);
-        existingShowtime.setShowDate(showtime.getShowDate());
-        existingShowtime.setShowTime(showtime.getShowTime());
-        existingShowtime.setBasePrice(showtime.getBasePrice());
-        existingShowtime.setWeekendPrice(showtime.getWeekendPrice());
-        existingShowtime.setAvailableSeats(showtime.getAvailableSeats());
+        if (showtime.getShowDate() != null) {
+            existingShowtime.setShowDate(showtime.getShowDate());
+        }
+
+        if (showtime.getShowTime() != null) {
+            existingShowtime.setShowTime(showtime.getShowTime());
+        }
+
+        if (showtime.getBasePrice() != null) {
+            existingShowtime.setBasePrice(showtime.getBasePrice());
+        }
+
+        if (showtime.getWeekendPrice() != null) {
+            existingShowtime.setWeekendPrice(showtime.getWeekendPrice());
+        }
+
+        if (showtime.getAvailableSeats() != null) {
+            existingShowtime.setAvailableSeats(showtime.getAvailableSeats());
+        }
+
+        if (showtime.getFormat() != null) {
+            existingShowtime.setFormat(showtime.getFormat());
+        }
+
+        if (showtime.getLanguage() != null) {
+            existingShowtime.setLanguage(showtime.getLanguage());
+        }
 
         return showtimeRepository.save(existingShowtime);
     }
