@@ -10,6 +10,10 @@ import com.cinema.recommender.entity.Booking;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -27,5 +31,11 @@ public class BookingController {
                 request.getSeatIds(),
                 request.getPromotionCode()
         );
+    }
+
+    @GetMapping("/user/{userId}")
+    public List<Booking> getUserBookings(@PathVariable Long userId) {
+
+        return bookingService.getUserBookings(userId);
     }
 }
