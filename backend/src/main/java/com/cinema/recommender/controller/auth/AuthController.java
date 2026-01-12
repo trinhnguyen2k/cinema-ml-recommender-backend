@@ -1,5 +1,6 @@
 package com.cinema.recommender.controller.auth;
 
+import com.cinema.recommender.dto.auth.LoginRequest;
 import com.cinema.recommender.dto.auth.RegisterRequest;
 import com.cinema.recommender.entity.User;
 import com.cinema.recommender.entity.enums.UserRole;
@@ -34,4 +35,22 @@ public class AuthController {
 
         return userRepository.save(user);
     }
+
+    @PostMapping("/login")
+    public User login(@RequestBody LoginRequest request) {
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new RuntimeException("User is not active");
+        }
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        return user;
+    }
+
 }
