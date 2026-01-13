@@ -23,17 +23,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        String method = request.getMethod();
-
-        return path.startsWith("/api/auth")
-                || (path.startsWith("/api/movies") && method.equals("GET"))
-                || (path.startsWith("/api/showtimes") && method.equals("GET"))
-                || (path.startsWith("/api/seats") && method.equals("GET"));
-    }
-
-    @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
@@ -42,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
+        // ✅ Không có token → cho request đi tiếp
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -59,16 +49,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String email = claims.getSubject();
             String role = claims.get("role", String.class);
 
-            if (!role.startsWith("ROLE_")) {
-                role = "ROLE_" + role;
-            }
+            // ✅ BẮT BUỘC ROLE_ prefix
+            String authority = role.startsWith("ROLE_")
+                    ? role
+                    : "ROLE_" + role;
+
+            List<GrantedAuthority> authorities =
+                    List.of(new SimpleGrantedAuthority(authority));
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             email,
                             null,
-                            List.of(new SimpleGrantedAuthority(role))
+                            authorities
                     );
+
+            // 🔥 DÒNG QUYẾT ĐỊNH
+            authentication.setDetails(
+                    new org.springframework.security.web.authentication
+                            .WebAuthenticationDetailsSource()
+                            .buildDetails(request)
+            );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
