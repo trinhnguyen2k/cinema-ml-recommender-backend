@@ -1,10 +1,10 @@
 package com.cinema.recommender.service;
 
-import com.cinema.recommender.entity.Seat;
-
+import com.cinema.recommender.dto.SeatAvailabilityResponse;
 import java.util.List;
 
 public interface SeatService {
 
-    List<Seat> getSeatsByShowtime(Long showtimeId);
+    List<SeatAvailabilityResponse> getSeatsByShowtime(Long showtimeId);
+
 }
