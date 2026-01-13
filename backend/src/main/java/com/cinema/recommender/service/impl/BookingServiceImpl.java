@@ -1,8 +1,11 @@
 package com.cinema.recommender.service.impl;
 
+import com.cinema.recommender.dto.CreateBookingRequest;
 import com.cinema.recommender.entity.*;
 import com.cinema.recommender.entity.enums.BookingStatus;
 import com.cinema.recommender.entity.enums.PaymentStatus;
+import com.cinema.recommender.exception.NotFoundException;
+import com.cinema.recommender.exception.SeatAlreadyBookedException;
 import com.cinema.recommender.repository.*;
 import com.cinema.recommender.service.BookingService;
 import lombok.RequiredArgsConstructor;
@@ -22,68 +25,68 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final PromotionRepository promotionRepository;
 
-    @Override
     @Transactional
-    public Booking createBooking(
-            Long userId,
-            Long showtimeId,
-            List<Long> seatIds,
-            String promotionCode
-    ) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @Override
+    public Booking createBooking(CreateBookingRequest request) {
 
-        Showtime showtime = showtimeRepository.findById(showtimeId)
-                .orElseThrow(() -> new RuntimeException("Showtime not found"));
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
-        // Validate ghe va ghe trong
-        List<Seat> seats = seatRepository.findAllById(seatIds);
-        if (seats.size() != seatIds.size()) {
-            throw new RuntimeException("Some seats not found");
+        Showtime showtime = showtimeRepository.findById(request.getShowtimeId())
+                .orElseThrow(() -> new NotFoundException("Showtime not found"));
+
+        // 1️⃣ Load seats
+        List<Seat> seats = seatRepository.findAllById(request.getSeatIds());
+
+        if (seats.size() != request.getSeatIds().size()) {
+            throw new NotFoundException("One or more seats not found");
         }
 
-        if (seats.size() > showtime.getAvailableSeats()) {
-            throw new RuntimeException("Not enough available seats");
+        // 2️⃣ Check seat already booked
+        for (Seat seat : seats) {
+            boolean alreadyBooked =
+                    bookingDetailRepository.existsBySeat_IdAndBooking_Showtime_Id(
+                            seat.getId(),
+                            showtime.getId()
+                    );
+
+            if (alreadyBooked) {
+                throw new SeatAlreadyBookedException(
+                        "Seat " + seat.getRowLetter() + seat.getNumber() + " already booked"
+                );
+            }
         }
 
-        // Xac dinh gia ve theo ngay
+        // 3️⃣ Xác định giá vé
         int baseTicketPrice;
         switch (showtime.getShowDate().getDayOfWeek()) {
-            case SATURDAY:
-            case SUNDAY:
-                baseTicketPrice = showtime.getWeekendPrice();
-                break;
-            default:
-                baseTicketPrice = showtime.getBasePrice();
+            case SATURDAY, SUNDAY -> baseTicketPrice = showtime.getWeekendPrice();
+            default -> baseTicketPrice = showtime.getBasePrice();
         }
 
         int totalPrice = seats.stream()
                 .mapToInt(seat -> baseTicketPrice + seat.getExtraPrice())
                 .sum();
 
-        // Kiem tra promotion code
-        if (promotionCode != null && !promotionCode.isBlank()) {
-            // Check promotion code valid
+        // 4️⃣ Apply promotion
+        if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
             Promotion promotion = promotionRepository
-                    .findByCodeAndIsActiveTrue(promotionCode)
+                    .findByCodeAndIsActiveTrue(request.getPromotionCode())
                     .orElseThrow(() -> new RuntimeException("Invalid promotion code"));
-            //Ap dung giam gia
+
             if (promotion.getDiscountPercent() != null) {
                 totalPrice -= totalPrice * promotion.getDiscountPercent() / 100;
             } else if (promotion.getDiscountAmount() != null) {
                 totalPrice -= promotion.getDiscountAmount();
             }
 
-            // Check avoid gia am (totalPrice < 0) va so luot da dung (userCount)
-            if (totalPrice < 0) {
-                totalPrice = 0;
-            }
+            if (totalPrice < 0) totalPrice = 0;
 
             promotion.setUsedCount(promotion.getUsedCount() + 1);
             promotionRepository.save(promotion);
         }
 
-        // Tao booking
+        // 5️⃣ Create booking
         Booking booking = new Booking();
         booking.setUser(user);
         booking.setShowtime(showtime);
@@ -93,7 +96,7 @@ public class BookingServiceImpl implements BookingService {
 
         booking = bookingRepository.save(booking);
 
-        // Tao booking detail cho tung seat
+        // 6️⃣ Create booking details
         for (Seat seat : seats) {
             BookingDetail detail = new BookingDetail();
             detail.setBooking(booking);
@@ -103,10 +106,8 @@ public class BookingServiceImpl implements BookingService {
             bookingDetailRepository.save(detail);
         }
 
-        // Tru available seats
-        showtime.setAvailableSeats(
-                showtime.getAvailableSeats() - seats.size()
-        );
+        // 7️⃣ Update available seats
+        showtime.setAvailableSeats(showtime.getAvailableSeats() - seats.size());
         showtimeRepository.save(showtime);
 
         return booking;

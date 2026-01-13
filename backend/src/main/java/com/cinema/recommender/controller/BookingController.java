@@ -25,12 +25,7 @@ public class BookingController {
     @PostMapping
     public Booking createBooking(@RequestBody CreateBookingRequest request) {
 
-        return bookingService.createBooking(
-                request.getUserId(),
-                request.getShowtimeId(),
-                request.getSeatIds(),
-                request.getPromotionCode()
-        );
+        return bookingService.createBooking(request);
     }
 
     @GetMapping("/user/{userId}")

@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.cinema.recommender.entity.enums.Language;
 import com.cinema.recommender.entity.enums.ShowtimeFormat;
+import com.cinema.recommender.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 
 import com.cinema.recommender.dto.CreateShowtimeRequest;
@@ -62,7 +63,7 @@ public class ShowtimeAdminServiceImpl implements ShowtimeAdminService {
     public Showtime updateShowtime(Long id, Showtime showtime) {
 
         Showtime existingShowtime = showtimeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Showtime not found"));
+                .orElseThrow(() -> new NotFoundException("Showtime not found"));
 
         if (showtime.getMovie() != null && showtime.getMovie().getId() != null) {
             Movie movie = movieRepository.findById(showtime.getMovie().getId())
@@ -110,7 +111,7 @@ public class ShowtimeAdminServiceImpl implements ShowtimeAdminService {
     @Override
     public void deleteShowtime(Long id) {
         Showtime showtime = showtimeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Showtime not found"));
+                .orElseThrow(() -> new NotFoundException("Showtime not found"));
 
         showtimeRepository.delete(showtime);
     }
@@ -123,6 +124,6 @@ public class ShowtimeAdminServiceImpl implements ShowtimeAdminService {
     @Override
     public Showtime getShowtimeById(Long id) {
         return showtimeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Showtime not found"));
+                .orElseThrow(() -> new NotFoundException("Showtime not found"));
     }
 }
