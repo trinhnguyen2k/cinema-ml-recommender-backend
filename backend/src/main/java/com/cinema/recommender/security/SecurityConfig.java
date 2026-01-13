@@ -11,44 +11,45 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableMethodSecurity
 public class SecurityConfig {
 
-    private static final String SECRET_KEY = "cinema_secret_key_123456";
+    private static final String SECRET_KEY =
+            "cinema_secret_key_123456_very_strong_key_2026";
+
+    private final SecurityExceptionHandler securityExceptionHandler;
+
+    public SecurityConfig(SecurityExceptionHandler securityExceptionHandler) {
+        this.securityExceptionHandler = securityExceptionHandler;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {})
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(securityExceptionHandler)
+                        .accessDeniedHandler(securityExceptionHandler)
+                )
                 .authorizeHttpRequests(auth -> auth
 
-                        // 1️⃣ AUTH – PUBLIC
-                        .requestMatchers("/api/auth/**").permitAll()
-
-                        // 2️⃣ PUBLIC GET APIs
+                        // PUBLIC
                         .requestMatchers(HttpMethod.GET,
                                 "/api/movies/**",
                                 "/api/showtimes/**",
                                 "/api/seats/**"
                         ).permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
 
-                        // 3️⃣ USER APIs
-                        .requestMatchers(
-                                "/api/bookings/**",
-                                "/api/promotions/**"
-                        ).hasAnyRole("USER", "STAFF", "ADMIN")
+                        // USER
+                        .requestMatchers("/api/bookings/**", "/api/promotions/**")
+                        .hasRole("USER")
 
-                        // 4️⃣ STAFF APIs
-                        .requestMatchers("/api/staff/**")
-                        .hasAnyRole("STAFF", "ADMIN")
-
-                        // 5️⃣ ADMIN APIs
+                        // ADMIN
                         .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
 
@@ -62,4 +63,5 @@ public class SecurityConfig {
         return http.build();
     }
 }
+
 
